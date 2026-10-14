@@ -1,0 +1,31 @@
+name: Build Jet (macOS AU + VST3)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j4
+
+      - name: Ad-hoc sign + zip
+        run: |
+          OUT=build/Jet_artefacts/Release
+          codesign --force --deep --sign - "$OUT/AU/Jet.component"
+          codesign --force --deep --sign - "$OUT/VST3/Jet.vst3"
+          mkdir -p dist
+          ditto -c -k --keepParent "$OUT/AU/Jet.component" dist/Jet-AU.zip
+          ditto -c -k --keepParent "$OUT/VST3/Jet.vst3"     dist/Jet-VST3.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Jet-macOS
+          path: dist/*.zip
